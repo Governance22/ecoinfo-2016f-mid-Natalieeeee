@@ -1,0 +1,309 @@
+---
+title: "生資三甲 1033284 蔡馨儀 資訊學期中考"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+###請隨機產生 10000 組正整數儲存成 vector 格式，並輸出成 random10k.csv
+random10k <-  c(sample.int(10000))
+print(random10k)
+#檔案輸出
+write.csv(x,file = 'C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/random10k.csv')
+```
+
+
+二. 請使用 for 迴圈列出 15 個費布納西(Fibonacci)數列
+```{r}
+#
+fib <- integer(15)
+fib[1] <- 0
+fib[2] <- 1
+for (i in 3:15) {
+  fib[i] <- fib[i-2] + fib[i-1]
+}
+print(fib)
+```
+
+三. 請將 sample_data.txt 輸入進 R 內，並完成以下計算
+```{r}
+#載入必要的libraries
+install.packages('data.table')
+library(data.table)
+```
+
+(a) 將 yyyymmddhh 轉成 POSIXct 時間戳記格式， 並新增為一個欄(variable)，命名為 timestamp。並將此 sample data 輸出為 sample_data_parsed.csv (以逗號分隔，具有欄位名稱)
+```{r}
+#載入必要的libraries
+install.packages('data.table')
+library(data.table)
+
+setwd('C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/')
+#將-9996、-9997、-9999數值轉成NA
+sample.data <- fread('C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/sample_data.txt',header = TRUE , na.strings = c('-9996','-9997','-9999'))
+#確認是否為data.frame
+
+#設定欄位名稱
+#先將欄位名稱儲存成一個文字向量並命名成 colnamessample,data
+colnames(sample.data) <- c('yyyymmddhh','PS01','TX01','RH01','WD01','WD02','PP01','SS01')
+
+#使用setnames()來設定sample.data的欄位名稱
+setnames(sample.data, colnames(sample.data))
+setnames(2014010101, 1:8,
+         c('yyyymmddhh','PS01','TX01','RH01','WD01','WD02','PP01','SS01'))
+
+#用聚合(aggregation)來計算某個週期的平均氣象官廖。所以我們要想把把想計算的資料，依據時間來做計算。第一個碰到的問題是如何把yyyymmddhh這個欄轉成符合(時間格式規範)(一般來說是P0SIX date time)的欄位，可以使用```srtiptime()```來處理
+sample.data[, timestamp := as.POSIXct(strptime(yyyymmddhh-1, '%Y%m%d%H'))]
+sample.data[ ,year:= format.Date(timestamp,'%Y' )]
+sample.data[ ,month:= format.Date(timestamp,'%m' )]
+sample.data[ ,md:= format.Date(timestamp,'%m%d' )]
+sample.data[ ,ym:= format.Date(timestamp,'%Y%m' )]
+sample.data[ ,ymd:= format.Date(timestamp,'%Y%m%d' )]
+write.csv(sample.data,file = 'C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/sample_data_parsed.csv')
+```
+
+(b) 請計算 2014 年至 2015 年這個測站的每月平均氣溫、每月平均濕度、每月累積降水， 並用表格呈現
+```{r}
+# 計算每個月的平均溫度
+mean_omit_na <- function(x){
+  as.numeric(x)
+  return(mean(x, na.rm = T))
+}
+
+aMTX01 <- aggregate(sample.data$TX01, by = list(sample.data$month), FUN = mean_omit_na)
+```
+
+```{r}
+# 每月平均濕度
+aMRH01 <- aggregate(RH01 ~ month, data = sample.data, FUN = mean_omit_na)
+```
+
+```{r}
+# 每月累積降水
+sum_omit_na <- function(x){
+  as.numeric(x)
+  return(sum(x, na.rm = T))
+}
+aMPP01 <- aggregate(PP01 ~ month, data = sample.data, FUN = sum_omit_na)
+```
+
+```{r}
+aM <- cbind.data.frame (aMTX01, aMRH01$RH01, aMPP01$PP01)
+TN <- c("Month" ,"TX01","RH01","PP01")
+setnames(aM, TN)
+aaM <- t(aM)
+```
+
+(c) 請計算 2014 年和 2015 年最冷月分別是在哪個月份？(提示：先計算月均溫)
+```{r}
+# 計算每個月的平均溫度
+aMTX01 <- aggregate(sample.data$TX01, by = list(sample.data$ym), FUN = mean_omit_na)
+install.packages('dplyr')
+library(dplyr)
+
+#2014最冷月
+HC2014 <- arrange(aMTX01,x)[1,1]
+#2015最冷月
+HC2015 <- arrange(aMTX01,x)[2,1]
+```
+
+(d) 在 2015 年最冷的那個月份中，該月中每日的最低溫平均是幾度C？
+```{r}
+min_omit_na <- function(x){
+  as.numeric(x)
+  return(min(x, na.rm = T))
+}
+install.packages('dplyr')
+library(dplyr)
+tbl_sample <- tbl_df(sample.data)
+```
+```{r}
+aMTX0123 <- filter(sample.data, ym == "201501") 
+aMTX012345 <- aggregate(TX01 ~ month ~ ymd, data = aMTX0123, FUN = min_omit_na)
+aMTX012345 <- aggregate(x ~ Group.1, data = aMTX01234, FUN = mean_omit_na)
+
+by_mon_day <- group_by(aMTX0123, month, ymd)
+a <- summarise(by_mon_day, min_DTP = min(TX01, na.rm = T))
+by_mon_day1 <- group_by(a, month)
+a1 <- summarise(by_mon_day1, mean_DTP = mean(min_DTP, na.rm = T))
+
+
+##a1該月中每日的最低溫平均:a1 = 14.49032
+```
+
+(e) 請計算 2014 年和 2015 年中，最熱的月分別是在哪個月份？
+```{r}
+# 計算每個月的平均溫度
+aMTX01 <- aggregate(sample.data$TX01, by = list(sample.data$ym), FUN = mean_omit_na)
+install.packages('dplyr')
+library(dplyr)
+#2014最暖月
+HM2014 <- arrange(aMTX01,x)[23,1]
+
+#2015最暖月
+HM2015 <- arrange(aMTX01,x)[24,1]
+```
+
+(f) 請計算 2014 年最熱的月份中，該月的每日最高溫平均為幾度C?
+```{r}
+#先過濾出201407的溫度
+HMTX2014 <- filter(sample.data, ym == "201407")
+#再綁month欄、ymd欄
+HMTX20140a <- group_by(HMTX2014, month, ymd)
+#再取出每天的最高溫
+b <- summarise(HMTX20140a, max_DTP = max(TX01, na.rm = T))
+#再綁住month
+HMTX20140aa <- group_by(b, month)
+#算出2014年7月的每日最高溫的平均
+b2 <- summarise(HMTX20140aa, mean_DTP = mean(max_DTP, na.rm = T))
+
+
+#2014 年最熱的月份的每日最高溫平均: b2 = 34.92258
+```
+
+(g) 請算出 2014 至 2015 年中，最濕月份的平均溫度
+```{r}
+#先算出每年每月的平均濕度
+aRH01 <- aggregate(sample.data$RH01, by = list(sample.data$ym), FUN = mean_omit_na)
+#將aRH01排列
+araRH01 <- arrange(aRH01,x)[24,1]
+
+
+##由此得知最濕的月份為201409，然後由aMTX01中可得知201409的平均溫度為28.75835
+```
+
+(h) 請計算每個月的月溫差(每月最高溫減去每月最高溫，取兩年平均)，平均月溫差最大的是哪個月？
+```{r}
+#再綁month欄、ym欄
+ab <- group_by(sample.data, month, ym)
+
+#再取出每月的最高溫
+ab1 <- summarise(ab, maxtem = max(TX01, na.rm = T))
+#再取出每月的最低溫
+ab12 <- summarise(ab, mintem = min(TX01, na.rm = T))
+#先將 ab1 & ab12 合併
+ab112 <- cbind.data.frame (ab1, ab12$mintem)
+TN1 <- c("Month" ,"ym","maxtem","mintem")
+setnames(ab112,TN1)
+
+#將每月最高溫減去每月最低溫
+ab123 <- mutate(ab112,dt=maxtem-ab12$mintem)
+
+#將相同月分得月溫差平均
+meandt <- aggregate(ab123$dt, by = list(ab123$month), FUN = mean_omit_na)
+#將meandt排列
+armeandt <- arrange(meandt,x)
+
+
+###由armeandt可知月溫差最大的月份為2月
+```
+
+(i) 請計算這兩年的年溫差平均(每年最高溫減去最低溫)
+```{r}
+#再綁year欄、ym欄
+yb <- group_by(sample.data, year, ym)
+#出年每月的溫
+yb1 <- summarise(yb, meantem = mean(TX01, na.rm = T))
+#過濾出2014的溫度
+fyb14 <- filter(yb1, year == "2014")
+#將fyb14排列
+arfyb14 <- arrange(fyb1,meantem)
+#過濾出2015的溫度
+fyb15 <- filter(yb1, year == "2015")
+#將fyb15排列
+arfyb15 <- arrange(fyb15,meantem)
+#將2014的meantem選出來
+sarfyb14 <- select(arfyb14,meantem)
+#將2015的meantem選出來
+sarfyb15 <- select(arfyb15,meantem)
+#先將 sarfyb14 & sarfyb15 合併
+yb1415 <- cbind.data.frame (sarfyb14$meantem, sarfyb15$meantem)
+#將2014排好的溫度加上2015排好的溫度
+coyb1415 <- mutate(yb1415, co = sarfyb14$meantem+sarfyb15$meantem)
+
+##將coyb1415的co(最大值減去最小值)/2 (59.33404-36.78914)/2 = 11.27245，這兩年的年溫差平均為11.27245
+```
+
+(j) 溫量指數(warmth index)是 Kira (1945) 提出的一個生態氣候指標，其計算方式為:
+    (1) 若該月均溫高於 5 ºC，則將該月份的月均溫減去 5 ºC。
+    (2) 若該月均溫低於或等於 5 ºC，則令其為 0 ºC
+    (3) 將所有減去 5 ºC 或當成 0 ºC 的月均溫相加起來得到的數據稱為「溫量指數」
+    請根據 (b) 所計算出的數值，算出 2014 至 2015 年的溫量指數。
+```{r}
+
+
+
+
+
+
+
+
+
+
+
+```
+
+(k) 請使用 climatol package 繪製 2014 至 2015 的生態氣候圖(Ecological climate diagrams)。 提示：你需要計算出每個月的累積降水平均、每日最高溫平均、每日最低溫平均、每月絕對最低溫。 可參考繪製生態氣候圖
+```{r}
+
+
+
+
+
+
+```
+
+四. 請計算 Table 2 中的下列各子題 (30%)
+
+(a) 請計算各島環境因子(total_cover, C, EC, ..., etc.) 的平均、 第一四分位數、中位數、第三四分位數、最大值及最小值以及標準差，並整理成表格。
+```{r}
+sample-data <- read.table('C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/penghu_env.csv')
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
