@@ -58,7 +58,7 @@ setnames(2014010101, 1:8,
          c('yyyymmddhh','PS01','TX01','RH01','WD01','WD02','PP01','SS01'))
 
 #用聚合(aggregation)來計算某個週期的平均氣象官廖。所以我們要想把把想計算的資料，依據時間來做計算。第一個碰到的問題是如何把yyyymmddhh這個欄轉成符合(時間格式規範)(一般來說是P0SIX date time)的欄位，可以使用```srtiptime()```來處理
-sample.data[, timestamp := as.POSIXct(strptime(yyyymmddhh-1, '%Y%m%d%H'))]
+sample.data[ ,timestamp := as.POSIXct(strptime(yyyymmddhh-1, '%Y%m%d%H'))]
 sample.data[ ,year:= format.Date(timestamp,'%Y' )]
 sample.data[ ,month:= format.Date(timestamp,'%m' )]
 sample.data[ ,md:= format.Date(timestamp,'%m%d' )]
@@ -262,7 +262,22 @@ coyb1415 <- mutate(yb1415, co = sarfyb14$meantem+sarfyb15$meantem)
 
 (a) 請計算各島環境因子(total_cover, C, EC, ..., etc.) 的平均、 第一四分位數、中位數、第三四分位數、最大值及最小值以及標準差，並整理成表格。
 ```{r}
-sample-data <- read.table('C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/penghu_env.csv')
+sampledata <- fread('C:\\Users\\Natalie\\Desktop\\生態資訊學\\期中考/penghu_env.csv', 
+        encoding = 'UTF-8')
+
+#各島環境因子C的平均
+cmean <-  aggregate(sampledata$C, by = list(sampledata$island), FUN = mean_omit_na)
+#各島環境因子EC的平均
+Ecmean <-  aggregate(sampledata$EC, by = list(sampledata$island), FUN = mean_omit_na)
+#各島環境因子K的平均
+Kmean <-  aggregate(sampledata$K, by = list(sampledata$island), FUN = mean_omit_na)
+#各島環境因子NA的平均
+Namean <-  aggregate(sampledata$Na, by = list(sampledata$island), FUN = mean_omit_na)
+#各島環境因子NA的平均
+Nmean <-  aggregate(sampledata$N, by = list(sampledata$island), FUN = mean_omit_na)
+#各島環境因子rock_ratio的平均
+rock_ratiomean <-  aggregate(sampledata$rock_ratio, by = list(sampledata$island), FUN = mean_omit_na)
+
 
 
 
